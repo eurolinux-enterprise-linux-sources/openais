@@ -3,7 +3,7 @@
 Name: openais
 Summary: The openais Standards-Based Cluster Framework executive and APIs
 Version: 1.1.1
-Release: 6%{?alphatag:.%{alphatag}}%{?dist}
+Release: 7%{?alphatag:.%{alphatag}}%{?dist}
 License: BSD
 Group: System Environment/Base
 URL: http://openais.org
@@ -21,8 +21,7 @@ Patch8: revision-2155.patch
 ExclusiveArch: i686 x86_64
 
 # Runtime bits
-Requires(post): /sbin/chkconfig
-Requires(preun): /sbin/chkconfig
+Requires(pre): /sbin/chkconfig
 Requires: corosync >= 1.0.0-1
 Requires: openaislib = %{version}-%{release}
 Conflicts: openais-devel <= 0.89
@@ -64,8 +63,6 @@ make %{_smp_mflags}
 rm -rf %{buildroot}
 
 make install DESTDIR=%{buildroot}
-mkdir -p %{buildroot}%{_initrddir}
-install -m 755 init/redhat %{buildroot}%{_initrddir}/openais
 
 ## tree fixup
 # drop static libs
@@ -77,27 +74,20 @@ rm -rf %{buildroot}%{_docdir}/*
 rm -rf %{buildroot}
 
 %description
-This package contains the openais service handlers, default configuration
-files and init script.
+This package contains the openais service handlers and default configuration
+files.
 
-%post
-/sbin/chkconfig --add openais || :
-
-%preun
-if [ $1 -eq 0 ]; then
-    %{_initrddir}/openais stop &>/dev/null || :
-    /sbin/chkconfig --del openais || :
+%pre
+if [ "$1" = "2" ] && [ -f %{_initrddir}/openais ]; then
+	/sbin/chkconfig openais off || :
+	/sbin/chkconfig --del openais || :
 fi
-
-%postun
-[ "$1" -ge "1" ] && %{_initrddir}/openais condrestart &>/dev/null || :
 
 %files
 %defattr(-,root,root,-)
 %doc LICENSE README.amf
 %dir %{_sysconfdir}/corosync
 %config(noreplace) %{_sysconfdir}/corosync/amf.conf.example
-%{_initrddir}/openais
 %dir %{_libexecdir}/lcrso
 %{_libexecdir}/lcrso/openaisserviceenable.lcrso
 %{_libexecdir}/lcrso/service_amf.lcrso
@@ -169,6 +159,10 @@ This package contains the include files used to develop using openais APIs.
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
+* Tue Jan 11 2011 Fabio M. Di Nitto <fdinitto@redhat.com> - 1.1.1-7
+- Drop openais init script
+  Resolves: rhbz#630110
+
 * Mon Aug 23 2010 Ryan O'Hara <rohara@redhat.com> - 1.1.1-6
 - OpenAIS checkpoint service should handle unterminated strings.
   Resolves: rhbz#625601
